@@ -1,0 +1,226 @@
+================================================================================
+    GUÍA DE SUSTENTACIÓN - PROYECTO ENCUESTAS CON PATRÓN DAO
+================================================================================
+
+PREPARACIÓN: Tener abiertos los archivos DAO y del dominio para mostrar código.
+
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ ES EL PATRÓN DAO Y PARA QUÉ SIRVE?
+--------------------------------------------------------------------------------
+
+DAO significa "Data Access Object" (Objeto de Acceso a Datos). Es un patrón
+de diseño que separa la lógica de negocio de la lógica de acceso a datos.
+
+En mi proyecto:
+- Las clases de la UI no acceden directamente a la base de datos
+- Uso clases DAO especializadas que manejan todas las operaciones de BD
+- Esto hace el código más mantenible y fácil de cambiar
+
+
+--------------------------------------------------------------------------------
+2. ¿CUÁLES SON LAS CAPAS DE TU APLICACIÓN?
+--------------------------------------------------------------------------------
+
+Mi aplicación tiene 4 capas principales:
+
+1. DOMINIO (com.encuestas.dominio)
+   - Clases: Encuesta, Pregunta, OpcionRespuesta, Respuesta
+   - Son POJOs (Plain Old Java Objects)
+   - Solo tienen atributos, getters, setters y constructores
+
+2. DAO (com.encuestas.dao)
+   - Clases: EncuestaDAO, PreguntaDAO, OpcionRespuestaDAO, RespuestaDAO
+   - Manejan TODAS las operaciones con la base de datos
+   - Métodos típicos: crear(), buscarPorId(), listar(), actualizar(), eliminar()
+
+3. UI (com.encuestas.ui)
+   - Clases Swing: EncuestaPanel, EncuestaDialog, ResumenDialog, etc.
+   - Interactúan con el usuario
+   - Llaman a los DAOs para guardar/recuperar datos
+
+4. UTIL (com.encuestas.util)
+   - ConexionDB: Maneja la conexión a la base de datos H2
+
+
+--------------------------------------------------------------------------------
+3. ¿CÓMO FUNCIONA LA SEPARACIÓN DE RESPONSABILIDADES?
+--------------------------------------------------------------------------------
+
+Ejemplo concreto con Encuesta:
+
+- Encuesta.java (DOMINIO):
+  * Solo tiene datos: id, titulo, descripcion
+  * No sabe NADA sobre la base de datos
+
+- EncuestaDAO.java (DAO):
+  * Sabe cómo guardar una Encuesta en BD
+  * Sabe cómo buscar Encuestas en BD
+  * Convierte ResultSet de SQL a objetos Encuesta
+
+- EncuestaPanel.java (UI):
+  * Muestra encuestas al usuario
+  * Cuando necesita datos, llama a EncuestaDAO
+  * No escribe SQL ni maneja Connection/PreparedStatement
+
+
+--------------------------------------------------------------------------------
+4. MUÉSTRAME UN EJEMPLO CONCRETO DE CÓDIGO
+--------------------------------------------------------------------------------
+
+[Abrir EncuestaDAO.java y mostrar método crear()]
+
+public void crear(Encuesta encuesta) throws SQLException {
+    String sql = "INSERT INTO Encuesta (titulo, descripcion, ...) VALUES (?, ?, ...)";
+    try (Connection conn = ConexionDB.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+        pstmt.setString(1, encuesta.getTitulo());
+        pstmt.setString(2, encuesta.getDescripcion());
+        // ...
+        pstmt.executeUpdate();
+    }
+}
+
+Explicar:
+- Recibe un objeto Encuesta del dominio
+- Convierte sus atributos a SQL con PreparedStatement
+- Usa try-with-resources para cerrar recursos automáticamente
+- Lanza SQLException para que la UI maneje el error
+
+
+--------------------------------------------------------------------------------
+5. ¿QUÉ VENTAJAS TE DA USAR EL PATRÓN DAO?
+--------------------------------------------------------------------------------
+
+1. SEPARACIÓN DE RESPONSABILIDADES
+   - Cada clase tiene un propósito claro
+   - Fácil de entender y mantener
+
+2. REUTILIZACIÓN
+   - Los métodos DAO se usan desde múltiples ventanas
+   - Ejemplo: EncuestaDAO.listar() se usa en EncuestaPanel y ResumenDialog
+
+3. FACILIDAD DE CAMBIO
+   - Si cambio de H2 a MySQL, solo modifico las clases DAO
+   - La UI y el dominio no cambian
+
+4. TESTABILIDAD
+   - Puedo probar los DAOs independientemente
+   - Puedo crear DAOs "fake" para testing
+
+5. EVITA CÓDIGO DUPLICADO
+   - Sin DAO, cada ventana tendría su propio código SQL
+   - Con DAO, un solo lugar para cada operación
+
+
+--------------------------------------------------------------------------------
+6. ¿CÓMO MANEJAS LAS RELACIONES ENTRE ENTIDADES?
+--------------------------------------------------------------------------------
+
+Ejemplo: Una Encuesta tiene muchas Preguntas
+
+- En la BD: Pregunta tiene una columna "encuestaId" (foreign key)
+
+- En el código:
+  PreguntaDAO.listarPorEncuesta(int encuestaId)
+
+  Este método trae todas las preguntas de una encuesta específica.
+
+- En la UI:
+  Cuando edito una encuesta, llamo a preguntaDAO.listarPorEncuesta(encuesta.getId())
+  y cargo las preguntas relacionadas.
+
+
+--------------------------------------------------------------------------------
+7. ¿CÓMO MANEJAS LOS ERRORES?
+--------------------------------------------------------------------------------
+
+- Los métodos DAO lanzan SQLException
+- La UI las captura con try-catch
+- Muestro mensajes de error al usuario con JOptionPane
+
+Ejemplo en EncuestaDialog.java:
+
+try {
+    encuestaDAO.crear(encuesta);
+    JOptionPane.showMessageDialog(this, "Encuesta guardada");
+} catch (SQLException e) {
+    JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+}
+
+
+--------------------------------------------------------------------------------
+8. ¿QUÉ OPERACIONES CRUD IMPLEMENTAS?
+--------------------------------------------------------------------------------
+
+CRUD = Create, Read, Update, Delete
+
+En cada DAO implemento:
+
+CREATE
+  - crear(Objeto obj): Inserta en BD y devuelve el ID generado
+
+READ
+  - buscarPorId(int id): Busca un registro específico
+  - listar(): Trae todos los registros
+  - listarPorX(): Métodos específicos (ej: listarPorEncuesta)
+
+UPDATE
+  - actualizar(Objeto obj): Modifica un registro existente
+
+DELETE
+  - eliminar(int id): Borra un registro por ID
+
+
+--------------------------------------------------------------------------------
+9. ¿CÓMO GARANTIZAS LA SEGURIDAD CONTRA SQL INJECTION?
+--------------------------------------------------------------------------------
+
+Siempre uso PreparedStatement con parámetros (?) en lugar de concatenar strings.
+
+MAL (vulnerable):
+  String sql = "SELECT * FROM Encuesta WHERE titulo = '" + titulo + "'";
+
+BIEN (seguro):
+  String sql = "SELECT * FROM Encuesta WHERE titulo = ?";
+  pstmt.setString(1, titulo);
+
+PreparedStatement escapa automáticamente los caracteres especiales.
+
+
+--------------------------------------------------------------------------------
+10. ¿QUÉ MEJORARÍAS EN TU IMPLEMENTACIÓN?
+--------------------------------------------------------------------------------
+
+Posibles mejoras (mostrar que entiendes el patrón más allá de lo básico):
+
+1. INTERFAZ DAO
+   - Crear una interfaz IEncuestaDAO
+   - Facilita cambiar implementaciones
+
+2. POOL DE CONEXIONES
+   - Reutilizar conexiones en lugar de crear nuevas
+   - Mejor rendimiento
+
+3. TRANSACCIONES
+   - Cuando creo una Encuesta con Preguntas, debería ser atómico
+   - Si falla algo, hacer rollback de todo
+
+4. MANEJO DE EXCEPCIONES CUSTOM
+   - En lugar de SQLException, usar excepciones propias
+   - Más semántico y controlable
+
+
+--------------------------------------------------------------------------------
+TIPS PARA LA SUSTENTACIÓN
+--------------------------------------------------------------------------------
+
+1. Mantén abierto el proyecto en el IDE
+2. Muestra el código mientras explicas
+3. Dibuja un diagrama simple de las 4 capas en la pizarra
+4. Ejecuta la aplicación y muestra cómo funciona
+5. Sé directo: "Aquí está el código, así funciona"
+6. Si no sabes algo, admítelo: "No lo implementé, pero se podría hacer con..."
+
+================================================================================

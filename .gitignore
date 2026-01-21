@@ -1,0 +1,42 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### H2 Database ###
+data/
+
+### Librerías JAR ###
+# OPCION 1: NO subir JARs (recomendado para proyectos profesionales)
+# Descomenta la siguiente línea para NO subir los JARs a GitHub:
+# lib/*.jar
+
+# OPCION 2: Subir JARs (recomendado para proyectos académicos)
+# Si quieres que los JARs se suban a GitHub, NO descomentes la línea anterior
+# Los JARs estarán disponibles para quien clone el repositorio
+# Ver INSTRUCCIONES_GITHUB.md para más detalles

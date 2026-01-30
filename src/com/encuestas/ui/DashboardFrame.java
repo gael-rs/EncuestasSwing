@@ -22,7 +22,7 @@ public class DashboardFrame extends JFrame {
     private RespuestaDAO respuestaDAO;
 
     private JPanel panelDashboard;
-    private JButton btnGraficos, btnCerrar;
+    private JButton btnCerrar;
 
     public DashboardFrame(Frame parent) {
         this.encuestaDAO = new EncuestaDAO();
@@ -50,10 +50,6 @@ public class DashboardFrame extends JFrame {
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel panelBotones = new JPanel(new FlowLayout());
-        btnGraficos = new JButton("Ver Graficos de Torta");
-        btnGraficos.addActionListener(e -> verGraficos());
-        panelBotones.add(btnGraficos);
-
         btnCerrar = new JButton("Cerrar");
         btnCerrar.addActionListener(e -> dispose());
         panelBotones.add(btnCerrar);
@@ -138,6 +134,16 @@ public class DashboardFrame extends JFrame {
 
                         panel.add(panelBarra);
                     }
+
+                    // Boton para ver grafico de torta individual
+                    JButton btnVerTorta = new JButton("Ver en modo torta");
+                    btnVerTorta.setFont(new Font("Arial", Font.PLAIN, 10));
+                    btnVerTorta.addActionListener(e -> {
+                        new GraficoTortaIndividualDialog(this, pregunta).setVisible(true);
+                    });
+                    JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    panelBoton.add(btnVerTorta);
+                    panel.add(panelBoton);
                 } else {
                     panel.add(new JLabel("  Sin respuestas aun"));
                 }
@@ -149,23 +155,4 @@ public class DashboardFrame extends JFrame {
         return panel;
     }
 
-    private void verGraficos() {
-        try {
-            List<Encuesta> encuestas = encuestaDAO.listarTodas();
-            if (!encuestas.isEmpty()) {
-                Encuesta primeraEncuesta = encuestas.get(0);
-                new GraficosTortaDialog(this, primeraEncuesta).setVisible(true);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "No hay encuestas disponibles",
-                    "Informacion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this,
-                "Error al cargar encuestas: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        }
-    }
 }
